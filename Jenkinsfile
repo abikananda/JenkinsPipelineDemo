@@ -1,30 +1,44 @@
 pipeline {
     agent any
-
+    tools { 
+        maven 'Maven-3.8.4'
+    }
     stages {
-        stage('Hello') {
+        stage('Checkout Code') {
             steps {
-                echo 'Hello World'
+                git 'https://github.com/abikananda/HelloJenkins.git'
             }
         }
-        stage('Build') {
+        stage('Static Code Analysis') {
             steps {
-                echo 'Building..'
+                sh 'mvn pmd:pmd'
+                sh 'mvn checkstyle:checkstyle'
+                sh 'mvn findbugs:findbugs'
             }
         }
-        stage('Deploy') {
+        stage('Run Unit Test Cases') {
             steps {
-                echo 'Deploying..'
+                sh 'mvn clean test'
             }
         }
-        stage('Test') {
+        stage('Publish Test Reports') {
             steps {
-                echo 'Testing..'
+                junit '**/target/surefire-reports/TEST-*.xml'
             }
         }
-        stage('Release') {
+        stage('Build Code') {
             steps {
-                echo 'Relising..'
+                sh 'mvn package -DskipTests=true'
+            }
+        }
+        stage('Archive Results') {
+            steps {
+                archiveArtifacts 'target/*.war'
+            }
+        }
+        stage('Deploy Application') {
+            steps {
+                deploy adapters: [tomcat8(credentialsId: 'tomcat_deployer', path: '', url: 'http://34.215.104.249:8080/')], contextPath: 'HelloJenkinsPipeline', war: '**/target/*.war'
             }
         }
     }
